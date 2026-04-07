@@ -1,0 +1,92 @@
+# AI.py
+
+from langchain_groq import ChatGroq
+from langchain.tools import tool
+from langchain.agents import initialize_agent, AgentType
+import os
+
+# -----------------------------
+# 🔐 SET API KEY (IMPORTANT)
+# -----------------------------
+# Replace with your key OR set via environment variable
+os.environ["GROQ_API_KEY"] = "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"
+
+# -----------------------------
+# 🤖 LLM SETUP
+# -----------------------------
+llm = ChatGroq(
+    model="llama-3.3-70b-versatile",
+    temperature=0,
+    max_tokens=300
+)
+
+# -----------------------------
+# 🛠 TOOL 1: SCORE CALCULATOR
+# -----------------------------
+@tool
+def score_calculator_tool(answer: str) -> dict:
+    """Calculate score (0-10) based on keywords, length, and clarity."""
+    keywords = ["definition", "example", "advantage", "process"]
+    
+    kw_score = sum(1 for w in keywords if w in answer.lower())
+    length_score = min(len(answer.split()) / 10, 3)
+    clarity_score = 3
+    
+    total = round(min(kw_score + length_score + clarity_score, 10), 2)
+    
+    return {
+        "score": total,
+        "word_count": len(answer.split())
+    }
+
+# -----------------------------
+# 🛠 TOOL 2: KEYWORD EXTRACTOR
+# -----------------------------
+@tool
+def keyword_extractor_tool(answer: str) -> dict:
+    """Extract keywords and return found/missing keyword lists."""
+    keywords = ["definition", "example", "advantage", "process"]
+    
+    found = [w for w in keywords if w in answer.lower()]
+    missing = [w for w in keywords if w not in answer.lower()]
+    
+    return {
+        "found": found,
+        "missing": missing,
+        "count": len(found)
+    }
+
+# -----------------------------
+# ⚙️ CREATE AGENT (FIXED)
+# -----------------------------
+tools = [score_calculator_tool, keyword_extractor_tool]
+
+agent = initialize_agent(
+    tools,
+    llm,
+    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+    verbose=True
+)
+
+# -----------------------------
+# ▶️ RUN PROGRAM
+# -----------------------------
+def run_once():
+    print("=== AI Assignment Evaluator ===")
+    
+    text = input("\nEnter Answer: ").strip()
+    
+    if not text:
+        print("❌ Empty input!")
+        return
+
+    result = agent.run(text)
+    
+    print("\n✅ Feedback:\n")
+    print(result)
+
+# -----------------------------
+# 🚀 START
+# -----------------------------
+if __name__ == "__main__":
+    run_once()
